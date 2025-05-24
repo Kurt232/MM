@@ -1,0 +1,16 @@
+model_parameters:
+  model_name: "./models/Qwen2.5-14B"
+  dtype: "bfloat16"
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.9
+  max_model_length: 4096
+  use_chat_template: True
+  generation_parameters:
+    temperature: 0.1
+    # top_k: 50
+    # min_p: 0.0
+    # top_p: 0.95
+    max_new_tokens: 4096
+# metric_options: # Optional metric arguments
+#   codegen_pass@1:16:
+#     num_samples: 16
