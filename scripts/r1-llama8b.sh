@@ -5,7 +5,7 @@ export CUDA_VISIBLE_DEVICES=$GPUS
 # export VLLM_WORKER_MULTIPROC_METHOD="spawn"
 
 MODEL_ARGS="configs/vllm_r1_llama8b.yaml"
-OUTPUT_DIR=eval/0523_4k_100/$MODEL
+OUTPUT_DIR=eval/0524_4k/$MODEL
 
 # lighteval|simpleqa|0|0,\
 tasks="\
@@ -29,7 +29,6 @@ extended|lcb:codegeneration_release_v6|0|0"
 START_TIME=$(date +%s)
 # max_sample: 1000
 lighteval vllm $MODEL_ARGS "$tasks" \
-    --max-samples 100 \
     --save-details \
     --dataset-loading-processes 32 \
     --output-dir $OUTPUT_DIR
