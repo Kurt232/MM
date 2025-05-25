@@ -35,5 +35,5 @@ lighteval vllm $MODEL_ARGS "$tasks" \
     --output-dir $OUTPUT_DIR
 
 END_TIME=$(date +%s)
-TIME_COST=$(($END_TIME - $START_TIME))
-echo "Time cost $(($TIME_COST / 3600)):$((($TIME_COST % 3600) / 60)):$(($TIME_COST % 60))"
+TIME_COST=$((END_TIME - START_TIME))
+echo "Time cost $((TIME_COST / 3600)):$(((TIME_COST % 3600) / 60)):$((TIME_COST % 60))"
