@@ -3,17 +3,17 @@ import json
 import glob
 import sys
 
-from pytablewriter import MarkdownTableWriter
+from pytablewriter import MarkdownTableWriter, CsvTableWriter
 from collections import defaultdict
 
 def make_results_table(model_result_dict):
-    """Generate table of results grouped by task, version, and metric."""
-    md_writer = MarkdownTableWriter()
-    md_writer.headers = ["Task", "Version", "Metric", "Model", "Value", "", "Stderr"]
+    """Generate both Markdown and CSV tables of results grouped by task, version, and metric."""
+    # Common headers and data preparation
+    headers = ["Task", "Version", "Metric", "Model", "Value", "", "Stderr"]
+    values = []
 
-    # Group data by (task, version), then by metric
+    # Grouping logic (same as before)
     grouped_data = defaultdict(lambda: defaultdict(list))
-
     for model_name, result_dict in model_result_dict.items():
         results = result_dict.get("results", {})
         versions = result_dict.get("versions", {})
@@ -28,52 +28,48 @@ def make_results_table(model_result_dict):
                 stderr = task_data.get(f"{metric}_stderr", None)
                 grouped_data[key][metric].append((model_name, value, stderr))
 
-    values = []
-    # Iterate through each (task, version) group
+    # Row construction (same as before)
     for (task, version) in sorted(grouped_data.keys()):
         metrics_dict = grouped_data[(task, version)]
         first_metric = True
         for metric in sorted(metrics_dict.keys()):
             models_values = metrics_dict[metric]
-            # Sort models alphabetically
             models_values.sort(key=lambda x: x[0])
             for i, (model, val, se) in enumerate(models_values):
-                # Determine displayed task, version, and metric
                 current_task = task if (first_metric and i == 0) else ""
                 current_version = version if (first_metric and i == 0) else ""
                 current_metric = metric if i == 0 else ""
                 
-                if se is not None:
-                    row = [
-                        current_task,
-                        current_version,
-                        current_metric,
-                        model,
-                        f"{val:.4f}",
-                        "±",
-                        f"{se:.4f}",
-                    ]
-                else:
-                    row = [
-                        current_task,
-                        current_version,
-                        current_metric,
-                        model,
-                        f"{val:.4f}",
-                        "",
-                        "",
-                    ]
+                row = [
+                    current_task,
+                    current_version,
+                    current_metric,
+                    model,
+                    f"{val:.4f}",
+                    "±" if se is not None else "",
+                    f"{se:.4f}" if se is not None else ""
+                ]
                 values.append(row)
-                # After the first row, subsequent metrics don't show task/version
                 if first_metric and i == 0:
                     first_metric = False
 
+    # Generate both formats
+    md_writer = MarkdownTableWriter()
+    md_writer.headers = headers
     md_writer.value_matrix = values
-    return md_writer.dumps()
+
+    csv_writer = CsvTableWriter()
+    csv_writer.headers = headers
+    csv_writer.value_matrix = values
+
+    return md_writer.dumps(), csv_writer.dumps()
 
 if __name__ == "__main__":
-    len(sys.argv) == 2 
+    assert len(sys.argv) >= 2 and len(sys.argv) <= 3
     root_path = sys.argv[1]
+    is_markdown = True
+    if len(sys.argv) == 3:
+        is_markdown = False
     root_path = os.path.join(root_path, "results")
     model_results_dirs = os.listdir(root_path)
     model_results_dirs = [d for d in model_results_dirs]
@@ -87,5 +83,14 @@ if __name__ == "__main__":
         model_name = d.split("_")[-1]
         data_dict[model_name] = data
     
-    table = make_results_table(data_dict)
-    print(table)
+    for model_name, data in data_dict.items():
+        data["results"].pop("all", None)
+        for task in list(data["results"].keys()):
+            if task.startswith("helm|mmlu:") and not task.startswith("helm|mmlu:_"):
+                data["results"].pop(task)
+    
+    mk_table, csv_table = make_results_table(data_dict)
+    if is_markdown:
+        print(mk_table)
+    else:
+        print(csv_table)
