@@ -3,6 +3,7 @@ import sys
 import collections
 from datetime import datetime
 import pandas as pd
+import glob
 
 from lighteval.logging.evaluation_tracker import EvaluationTracker
 from lighteval.models.vllm.vllm_model import VLLMModelConfig
@@ -14,7 +15,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def run(pipeline: Pipeline, output_dir: str, date_id: str):
+def run(pipeline: Pipeline, output_path: str, date_id: str):
     logger.info("--- RUNNING MODEL ---")
     task2sample_id_with_responses: dict[str, list[tuple[str, str, list, ModelResponse]]] = collections.defaultdict(list)
     try:
@@ -68,20 +69,31 @@ def run(pipeline: Pipeline, output_dir: str, date_id: str):
         
         df = pd.DataFrame(response_list, dtype=str)
         df = df.sort_values("sample_id")
-        output_path = os.path.join(output_dir, "outputs",
-            pipeline.model.model_info.model_name,
-            date_id,
-            f"outputs_{task_name}_{date_id}.parquet")
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
         df.to_parquet(
-            output_path,
+            os.path.join(output_path, f"outputs_{task_name}_{date_id}.parquet"),
             index=False
         )
 
 def main():
-    assert len(sys.argv) == 3
+    assert len(sys.argv) >=3 and len(sys.argv) <= 4, "Usage: python infer.py <output_dir> <model_name> [timestamp]"
     output_dir = sys.argv[1]
     model_name = sys.argv[2]
+    timestamp = None
+    _model_name = model_name.replace("/", "_")
+    if len(sys.argv) == 4:
+        timestamp = sys.argv[3]
+        if timestamp == "latest":
+            path = f"{output_dir}/outputs/{_model_name}/*/"
+            timestamps = glob.glob(path)
+            timestamp = sorted(timestamps)[-1].split("/")[-2]
+            logging.info(f"Latest timestamp: {timestamp}")
+    else:
+        timestamp = datetime.now().isoformat().replace(":", "-")
+    
+    output_path = os.path.join(output_dir, "outputs", _model_name, timestamp)
+    os.makedirs(output_path, exist_ok=True)
+    date_id = timestamp
 
     evaluation_tracker = EvaluationTracker(
         output_dir=output_dir,
@@ -104,7 +116,6 @@ def main():
         }
     )
 
-    timestamp = datetime.now()
     tasks = "helm|mmlu|0|0"
     pipeline = Pipeline(
         tasks=tasks,
@@ -113,7 +124,6 @@ def main():
         model_config=model_config,
     ) # init the tasks
 
-    date_id = datetime.now().isoformat().replace(":", "-")
     logger.info(f"Running inference for tasks: {tasks}")
     run(pipeline, output_dir, date_id)
 
@@ -125,6 +135,7 @@ helm|openbookqa|0|0,\
 lighteval|arc:easy|0|0,\
 leaderboard|arc:challenge|0|0\
 """
+    logger.info(f"Running inference for tasks: {tasks}")
     pipeline.pipeline_parameters.max_samples=500
     pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
     run(pipeline, output_dir, date_id)
@@ -137,12 +148,12 @@ lighteval|math_500|0|0,\
 lighteval|gsm8k|0|0,\
 extended|lcb:codegeneration_release_v6|0|0\
 """
+    logger.info(f"Running inference for tasks: {tasks}")
     pipeline.pipeline_parameters.max_samples=500
     pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
     pipeline.model._config.generation_parameters.temperature = 0.6
     pipeline.model._config.generation_parameters.top_p = 0.95
     run(pipeline, output_dir, date_id)
-
     
     time_delta = datetime.now() - timestamp
     # use HH:MM:SS format
