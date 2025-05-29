@@ -12,6 +12,7 @@ from lighteval.tasks.requests import SampleUid
 from lighteval.models.model_output import ModelResponse, GenerativeResponse
 
 import logging
+import argparse
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +78,22 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
             index=False
         )
 
-def main():
-    assert len(sys.argv) >=3 and len(sys.argv) <= 4, "Usage: python infer.py <output_dir> <model_name> [timestamp]"
-    output_dir = sys.argv[1]
-    model_name = sys.argv[2]
-    timestamp = None
+def main(args):
+    output_dir = args.output_dir
+    model_name = args.model_name
     _model_name = model_name.replace("/", "_")
-    if len(sys.argv) == 4:
-        timestamp = sys.argv[3]
-        if timestamp == "latest":
-            path = f"{output_dir}/outputs/{_model_name}/*/"
-            timestamps = glob.glob(path)
+    timestamp = args.timestamp
+    
+    if timestamp == "latest":
+        path = f"{output_dir}/outputs/{_model_name}/*/"
+        timestamps = glob.glob(path)
+        if timestamps:
             timestamp = sorted(timestamps)[-1].split("/")[-2]
             logging.info(f"Latest timestamp: {timestamp}")
-    else:
+        else:
+            logging.warning(f"No existing timestamps found for {_model_name}")
+            timestamp = datetime.now().isoformat().replace(":", "-")
+    elif timestamp is None:
         timestamp = datetime.now().isoformat().replace(":", "-")
     
     output_path = os.path.join(output_dir, "outputs", _model_name, timestamp)
@@ -105,6 +108,7 @@ def main():
         launcher_type=ParallelismManager.VLLM,
         dataset_loading_processes=32,
         max_samples=100, # for mmlu
+        use_chat_template=args.use_chat_template
     )
 
     model_config = VLLMModelConfig(
@@ -112,6 +116,7 @@ def main():
         dtype="bfloat16",
         max_model_length=4096,
         gpu_memory_utilization=0.9,
+        use_chat_template=args.use_chat_template,
         generation_parameters= {
             "max_new_tokens":4096,
             "temperature": 0.0,
@@ -166,4 +171,12 @@ extended|lcb:codegeneration_release_v6|0|0\
         
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Run inference on various tasks')
+    parser.add_argument('output_dir', type=str, help='Directory to save outputs')
+    parser.add_argument('model_name', type=str, help='Name of the model to use')
+    parser.add_argument('--timestamp', type=str, default=None, 
+                      help='Timestamp for output directory (default: current time, "latest" for most recent)')
+    parser.add_argument('--use_chat_template', action='store_true',
+                      help='Use chat template for Instruction Models')
+    args = parser.parse_args()
+    main(args)
