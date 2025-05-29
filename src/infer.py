@@ -114,7 +114,7 @@ def main(args):
     model_config = VLLMModelConfig(
         model_name=model_name,
         dtype="bfloat16",
-        max_model_length=4096,
+        max_model_length=2048,
         gpu_memory_utilization=0.9,
         use_chat_template=args.use_chat_template,
         generation_parameters= {
@@ -139,7 +139,6 @@ def main(args):
     tasks = """\
 helm|truthfulqa|0|0,\
 helm|commonsenseqa|0|0,\
-helm|openbookqa|0|0,\
 lighteval|arc:easy|0|0,\
 leaderboard|arc:challenge|0|0\
 """
