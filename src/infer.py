@@ -62,6 +62,8 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
                     "logits": response.logits if isinstance(response, GenerativeResponse) else None,
                     # "input_tokens": response.input_tokens,
                     # "generated_tokens": response.generated_tokens,
+                    "input_tokens_count": len(response.input_tokens) if response.input_tokens is not None else -1,
+                    "generated_tokens_count": len(response.generated_tokens) if response.generated_tokens is not None else -1,
                     "truncated_tokens_count": response.truncated_tokens_count,
                     "padded_tokens_count": response.padded_tokens_count,
                 }
@@ -116,6 +118,7 @@ def main():
         }
     )
 
+    timestamp = datetime.now()
     tasks = "helm|mmlu|0|0"
     pipeline = Pipeline(
         tasks=tasks,
@@ -125,7 +128,7 @@ def main():
     ) # init the tasks
 
     logger.info(f"Running inference for tasks: {tasks}")
-    run(pipeline, output_dir, date_id)
+    run(pipeline, output_path, date_id)
 
     # MCQ greedy search
     tasks = """\
@@ -138,7 +141,7 @@ leaderboard|arc:challenge|0|0\
     logger.info(f"Running inference for tasks: {tasks}")
     pipeline.pipeline_parameters.max_samples=500
     pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
-    run(pipeline, output_dir, date_id)
+    run(pipeline, output_path, date_id)
 
     # Generative task (Reasoning)
     tasks = """\
@@ -153,7 +156,7 @@ extended|lcb:codegeneration_release_v6|0|0\
     pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
     pipeline.model._config.generation_parameters.temperature = 0.6
     pipeline.model._config.generation_parameters.top_p = 0.95
-    run(pipeline, output_dir, date_id)
+    run(pipeline, output_path, date_id)
     
     time_delta = datetime.now() - timestamp
     # use HH:MM:SS format
