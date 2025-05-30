@@ -64,7 +64,7 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
                     # "input_tokens": response.input_tokens,
                     # "generated_tokens": response.generated_tokens,
                     "input_tokens_count": len(response.input_tokens) if response.input_tokens is not None else -1,
-                    "generated_tokens_count": len(response.generated_tokens) if response.generated_tokens is not None else -1,
+                    "generated_tokens_count": [len(o) for o in response.generated_tokens] if response.generated_tokens is not None else [],
                     "truncated_tokens_count": response.truncated_tokens_count,
                     "padded_tokens_count": response.padded_tokens_count,
                 }
@@ -114,7 +114,7 @@ def main(args):
     model_config = VLLMModelConfig(
         model_name=model_name,
         dtype="bfloat16",
-        max_model_length=2048,
+        max_model_length=args.max_length,
         gpu_memory_utilization=0.9,
         use_chat_template=args.use_chat_template,
         generation_parameters= {
@@ -175,6 +175,8 @@ if __name__ == "__main__":
     parser.add_argument('model_name', type=str, help='Name of the model to use')
     parser.add_argument('--timestamp', type=str, default=None, 
                       help='Timestamp for output directory (default: current time, "latest" for most recent)')
+    parser.add_argument('--max_length', type=int, default=2048,
+                      help='Maximum length of LLM')
     parser.add_argument('--use_chat_template', action='store_true',
                       help='Use chat template for Instruction Models')
     args = parser.parse_args()
