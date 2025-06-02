@@ -78,12 +78,31 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
             index=False
         )
 
+def check_existed_tasks(output_dir: str, _model_name:str, _timestamp:str, tasks: str):
+    if _timestamp is None:
+        return tasks
+    output_dir = os.path.join(output_dir, "outputs", _model_name, _timestamp)
+    if not os.path.exists(output_dir):
+        return tasks
+    tasks = tasks.split(",")
+    existing_tasks = set(os.path.basename(f).replace(f"outputs_", "").replace(f"_{_timestamp}.parquet", "") for f in glob.glob(os.path.join(output_dir, "outputs_*.parquet")))
+    target_tasks = []
+    for task in tasks:
+        short_task = task[:-2] # "mm|mmlu_pro_c|0|0" - > "mm|mmlu_pro_c|0"
+        if short_task not in existing_tasks:
+            target_tasks.append(task)
+    
+    if not target_tasks:
+        return None
+    return ",".join(target_tasks)
+
 def main(args):
     output_dir = args.output_dir
     model_name = args.model_name
     _model_name = model_name.replace("/", "_")
     timestamp = args.timestamp
-    
+    _timestamp = timestamp
+
     if timestamp == "latest":
         path = f"{output_dir}/outputs/{_model_name}/*/"
         timestamps = glob.glob(path)
@@ -104,27 +123,28 @@ def main(args):
         output_dir=output_dir,
     )
 
-    pipeline_params = PipelineParameters(
-        launcher_type=ParallelismManager.VLLM,
-        dataset_loading_processes=32,
-        max_samples=100, # for mmlu
-        use_chat_template=args.use_chat_template
-    )
-
     model_config = VLLMModelConfig(
         model_name=model_name,
         dtype="bfloat16",
         max_model_length=args.max_length,
         gpu_memory_utilization=0.9,
-        use_chat_template=args.use_chat_template,
+        use_chat_template=True,
         generation_parameters= {
-            "max_new_tokens":4096,
+            "max_new_tokens": None,
             "temperature": 0.0,
         }
     )
 
     timestamp = datetime.now()
-    tasks = "helm|mmlu|0|0"
+    tasks = "mm|mmlu_pro|0|0"
+    
+    pipeline_params = PipelineParameters(
+        launcher_type=ParallelismManager.VLLM,
+        dataset_loading_processes=32,
+        max_samples=6000, # for mmlu_pro
+        use_chat_template=True,
+    )
+
     pipeline = Pipeline(
         tasks=tasks,
         pipeline_parameters=pipeline_params,
@@ -132,35 +152,43 @@ def main(args):
         model_config=model_config,
     ) # init the tasks
 
-    logger.info(f"Running inference for tasks: {tasks}")
-    run(pipeline, output_path, date_id)
+    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+    if tasks:
+        logger.info(f"Running inference for tasks: {tasks}")
+        run(pipeline, output_path, date_id)
 
     # MCQ greedy search
     tasks = """\
-helm|truthfulqa|0|0,\
-helm|commonsenseqa|0|0,\
-lighteval|arc:easy|0|0,\
-leaderboard|arc:challenge|0|0\
+mm|truthfulqa|0|0,\
+mm|commonsenseqa|0|0,\
+mm|arc:easy|0|0,\
+mm|arc:challenge|0|0,\
+mm|gpqa:diamond|0|0\
 """
-    logger.info(f"Running inference for tasks: {tasks}")
-    pipeline.pipeline_parameters.max_samples=500
-    pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
-    run(pipeline, output_path, date_id)
+    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+    if tasks:
+        logger.info(f"Running inference for tasks: {tasks}")
+        pipeline.pipeline_parameters.max_samples=500
+        pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
+        run(pipeline, output_path, date_id)
 
     # Generative task (Reasoning)
     tasks = """\
-lighteval|gpqa:diamond|0|0,\
-lighteval|aime24|0|0,\
-lighteval|math_500|0|0,\
-lighteval|gsm8k|0|0,\
+mm|aime24|0|0,\
+mm|math_500|0|0,\
+mm|gsm8k|0|0,\
 extended|lcb:codegeneration_release_v6|0|0\
 """
-    logger.info(f"Running inference for tasks: {tasks}")
-    pipeline.pipeline_parameters.max_samples=500
-    pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
-    pipeline.model._config.generation_parameters.temperature = 0.6
-    pipeline.model._config.generation_parameters.top_p = 0.95
-    run(pipeline, output_path, date_id)
+    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+    if tasks:
+        logger.info(f"Running inference for tasks: {tasks}")
+        pipeline.pipeline_parameters.max_samples=500
+        pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
+        pipeline.model._config.generation_parameters.temperature = 0.6
+        pipeline.model._config.generation_parameters.top_p = 0.95
+        pipeline.model._config.generation_parameters.stop_tokens = None
+        run(pipeline, output_path, date_id)
+    
     
     time_delta = datetime.now() - timestamp
     # use HH:MM:SS format
@@ -175,9 +203,7 @@ if __name__ == "__main__":
     parser.add_argument('model_name', type=str, help='Name of the model to use')
     parser.add_argument('--timestamp', type=str, default=None, 
                       help='Timestamp for output directory (default: current time, "latest" for most recent)')
-    parser.add_argument('--max_length', type=int, default=2048,
+    parser.add_argument('--max_length', type=int, default=4096,
                       help='Maximum length of LLM')
-    parser.add_argument('--use_chat_template', action='store_true',
-                      help='Use chat template for Instruction Models')
     args = parser.parse_args()
     main(args)

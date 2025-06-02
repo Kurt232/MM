@@ -95,17 +95,16 @@ def main():
         }
     )
 
+# mm|gsm8k|0|0,\
     tasks = """\
-helm|mmlu|0|0,\
-helm|truthfulqa|0|0,\
-helm|commonsenseqa|0|0,\
-helm|openbookqa|0|0,\
-lighteval|arc:easy|0|0,\
-leaderboard|arc:challenge|0|0,\
-lighteval|gpqa:diamond|0|0,\
-lighteval|aime24|0|0,\
-lighteval|math_500|0|0,\
-lighteval|gsm8k|0|0,\
+mm|mmlu_pro|0|0,\
+mm|truthfulqa|0|0,\
+mm|commonsenseqa|0|0,\
+mm|arc:easy|0|0,\
+mm|arc:challenge|0|0,\
+mm|gpqa:diamond|0|0,\
+mm|aime24|0|0,\
+mm|math_500|0|0,\
 extended|lcb:codegeneration_release_v6|0|0\
 """
 
