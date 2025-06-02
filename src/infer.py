@@ -64,7 +64,7 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
                     # "input_tokens": response.input_tokens,
                     # "generated_tokens": response.generated_tokens,
                     "input_tokens_count": len(response.input_tokens) if response.input_tokens is not None else -1,
-                    "generated_tokens_count": [len(o) for o in response.generated_tokens] if response.generated_tokens is not None else [],
+                    "generated_tokens_count": len(response.generated_tokens) if response.generated_tokens is not None else -1,
                     "truncated_tokens_count": response.truncated_tokens_count,
                     "padded_tokens_count": response.padded_tokens_count,
                 }

@@ -80,7 +80,7 @@ if __name__ == "__main__":
         timestamps = [p.split('/')[-1][8:-5] for p in glob.glob(path)]
         timestamp = sorted(timestamps)[-1]
         data = json.load(open(f"{root_path}/{d}/results_{timestamp}.json"))
-        model_name = d.split("_")[-1]
+        model_name = d
         data_dict[model_name] = data
     
     for model_name, data in data_dict.items():
