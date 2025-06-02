@@ -20,7 +20,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def load_responses(response_dir, timestamp, current_task_set):
-    logger.info("--- LOAD RESPONSES ---")
+    logger.debug("--- LOAD RESPONSES ---")
     if not os.path.exists(response_dir):
         raise FileNotFoundError(f"Response directory {response_dir} does not exist.")
     sample_id_to_responses: dict[(SampleUid, MetricCategory), list[ModelResponse]] = collections.defaultdict(list)
@@ -95,7 +95,6 @@ def main():
         }
     )
 
-# mm|gsm8k|0|0,\
     tasks = """\
 mm|mmlu_pro|0|0,\
 mm|truthfulqa|0|0,\
@@ -105,9 +104,10 @@ mm|arc:challenge|0|0,\
 mm|gpqa:diamond|0|0,\
 mm|aime24|0|0,\
 mm|math_500|0|0,\
+mm|gsm8k|0|0,\
 extended|lcb:codegeneration_release_v6|0|0\
 """
-
+    
     pipeline = Pipeline(
         tasks=tasks,
         pipeline_parameters=pipeline_params,
@@ -122,7 +122,7 @@ extended|lcb:codegeneration_release_v6|0|0\
             current_task_set.add(f"{task}|{few_shot[0]}")
 
     sample_id_to_responses = load_responses(response_dir, date_id, current_task_set)
-    logger.info("--- COMPUTING METRICS ---")
+    logger.debug("--- COMPUTING METRICS ---")
     task_metric_category_groups = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(list))
     )
@@ -158,14 +158,14 @@ extended|lcb:codegeneration_release_v6|0|0\
 
     versions = pipeline.evaluation_tracker.versions_logger.versions
     results_dict = {"results": results, "versions": versions}
-    logger.info("--- SAVING RESULTS ---")
+    logger.debug("--- SAVING RESULTS ---")
     save_dir = f"{output_dir}/results/{_model_name}"
     os.makedirs(save_dir, exist_ok=True)
     json.dump(results_dict, open(f"{save_dir}/results_{date_id}.json", "w"), indent=2, ensure_ascii=False)
 
     pipeline.model.cleanup()
 
-    logger.info("--- SHOWING RESULTS ---")
+    logger.debug("--- SHOWING RESULTS ---")
     md_table = make_results_table(results_dict)
     print(md_table)
 
