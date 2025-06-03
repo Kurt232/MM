@@ -104,9 +104,9 @@ mm|arc:challenge|0|0,\
 mm|gpqa:diamond|0|0,\
 mm|aime24|0|0,\
 mm|math_500|0|0,\
-mm|gsm8k|0|0,\
-extended|lcb:codegeneration_release_v6|0|0\
+mm|gsm8k|0|0\
 """
+# extended|lcb:codegeneration_release_v6|0|0\
     
     pipeline = Pipeline(
         tasks=tasks,

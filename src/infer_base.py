@@ -15,13 +15,14 @@ import logging
 import argparse
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def run(pipeline: Pipeline, output_path: str, date_id: str):
-    logger.debug("--- RUNNING MODEL ---")
+    logger.info("--- RUNNING MODEL ---")
     task2sample_id_with_responses: dict[str, list[tuple[str, str, list, ModelResponse]]] = collections.defaultdict(list)
     try:
         for request_type, requests in pipeline.requests.items():
-            logger.debug(f"Running {request_type} requests")
+            logger.info(f"Running {request_type} requests")
             run_model = pipeline.model.get_method_from_request_type(request_type=request_type)
             responses = run_model(requests)
 
@@ -33,7 +34,7 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
     except Exception as e:
         logger.error(f"Error in inference: {e}")
 
-    logger.debug("--- SAVING RESPONSES ---")
+    logger.info("--- SAVING RESPONSES ---")
     for task_name, sample_id2responses in task2sample_id_with_responses.items():
         response_list = []
         for (sample_id, request_id, metric_categories, response) in sample_id2responses:
@@ -101,7 +102,6 @@ def main(args):
     model_name = args.model_name
     _model_name = model_name.replace("/", "_")
     timestamp = args.timestamp
-    _timestamp = timestamp
 
     if timestamp == "latest":
         path = f"{output_dir}/outputs/{_model_name}/*/"
@@ -153,9 +153,9 @@ def main(args):
         model_config=model_config,
     ) # init the tasks
 
-    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+    tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
-        logger.debug(f"Running inference for tasks: {tasks}")
+        logger.info(f"Running inference for tasks: {tasks}")
         run(pipeline, output_path, date_id)
 
     # MCQ greedy search
@@ -166,9 +166,9 @@ mm|arc_c:easy|0|0,\
 mm|arc_c:challenge|0|0,\
 mm|gpqa_c:diamond|0|0\
 """
-    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+    tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
-        logger.debug(f"Running inference for tasks: {tasks}")
+        logger.info(f"Running inference for tasks: {tasks}")
         pipeline.pipeline_parameters.max_samples=500
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
@@ -177,12 +177,12 @@ mm|gpqa_c:diamond|0|0\
     tasks = """\
 mm|aime24|0|0,\
 mm|math_500|0|0,\
-mm|gsm8k_c|0|0,\
-extended|lcb:codegeneration_release_v6|0|0\
+mm|gsm8k_c|0|0\
 """
-    tasks = check_existed_tasks(output_dir, _model_name, _timestamp, tasks)
+# extended|lcb:codegeneration_release_v6|0|0
+    tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
-        logger.debug(f"Running inference for tasks: {tasks}")
+        logger.info(f"Running inference for tasks: {tasks}")
         pipeline.pipeline_parameters.max_samples=500
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         pipeline.model._config.generation_parameters.temperature = 0.6
@@ -193,7 +193,7 @@ extended|lcb:codegeneration_release_v6|0|0\
     
     time_delta = datetime.now() - timestamp
     # use HH:MM:SS format
-    logger.debug(f" Time Cost: {time_delta.seconds // 3600}:{(time_delta.seconds // 60) % 60:02}:{time_delta.seconds % 60:02}")
+    logger.info(f" Time Cost: {time_delta.seconds // 3600}:{(time_delta.seconds // 60) % 60:02}:{time_delta.seconds % 60:02}")
     
     pipeline.model.cleanup()
         
