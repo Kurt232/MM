@@ -10,5 +10,10 @@ git clone git@github.com:huggingface/lighteval.git
 uv pip install vllm --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 uv pip install -e lighteval[vllm,math] --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 uv pip install "datasets==2.20.0" --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-uv pip install ipykernel --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+uv pip install ipykernel ipywidgets --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+```
+
+```sh
+# for submodule
+git config url."git@wjdu-github.com:".insteadOf "git@github.com:"
 ```
