@@ -5,6 +5,9 @@ import pandas as pd
 import ast
 import sys
 import glob
+import concurrent.futures
+from tqdm import tqdm
+import math
 
 from lighteval.logging.evaluation_tracker import EvaluationTracker
 from lighteval.models.vllm.vllm_model import VLLMModelConfig
@@ -132,6 +135,11 @@ mm|gsm8k_c|0|0\
         task_metric_category_groups[sample_id.task_name][metric_category]["responses"].append(sample_responses)
         task_metric_category_groups[sample_id.task_name][metric_category]["docs"].append(pipeline.docs[sample_id])
 
+    # Configure parallelization
+    num_workers = min(128, os.cpu_count() / 2)  # Adjust based on your system
+    # 3 min
+    batch_size = 10  # Adjust based on memory constraints
+
     for task_name, samples_per_metric in task_metric_category_groups.items():
         task: LightevalTask = pipeline._get_task(task_name)
 
@@ -139,17 +147,44 @@ mm|gsm8k_c|0|0\
             sample_ids = samples["ids"]
             responses = samples["responses"]
             docs = samples["docs"]
-            metric_function = task.get_metric_method_from_category(metric_category=metric_category)
+            try:
+                metric_function = task.get_metric_method_from_category(metric_category=metric_category)
+            except Exception as e:
+                logger.critical(task_name)
+                raise e
             metric_category_metrics = [metric for metric in task.metrics if metric.category == metric_category]
 
-            outputs = metric_function(
-                sample_ids=sample_ids,
-                responses=responses,
-                formatted_docs=docs,
-                metrics=metric_category_metrics,
-            )
-
-            for output in outputs:
+            num_batches = math.ceil(len(sample_ids) / batch_size)
+            all_outputs = []
+            # Process in parallel
+            with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+                futures = []
+                
+                # Submit tasks
+                for i in range(0, num_batches):
+                    start_idx = i * batch_size
+                    end_idx = min((i + 1) * batch_size, len(sample_ids))
+                    
+                    futures.append(
+                        executor.submit(
+                            metric_function,
+                            sample_ids=sample_ids[start_idx:end_idx],
+                            responses=responses[start_idx:end_idx],
+                            formatted_docs=docs[start_idx:end_idx],
+                            metrics=metric_category_metrics
+                        )
+                    )
+                
+                # Collect results with progress bar
+                for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+                    try:
+                        batch_outputs = future.result()
+                        all_outputs.extend(batch_outputs)
+                    except Exception as e:
+                        logger.critical(f"Error processing batch: {e}")
+            
+            # Log results
+            for output in all_outputs:
                 pipeline.evaluation_tracker.metrics_logger.log(task_name, output)
 
     pipeline.evaluation_tracker.metrics_logger.aggregate(pipeline.task_dict)
