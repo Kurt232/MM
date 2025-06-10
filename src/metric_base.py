@@ -100,16 +100,15 @@ def main():
 
     tasks = """\
 mm|mmlu_pro_c|0|0,\
-helm|truthfulqa|0|0,\
-helm|commonsenseqa|0|0,\
-mm|arc_c:easy|0|0,\
-mm|arc_c:challenge|0|0,\
-mm|gpqa_c:diamond|0|0,\
-mm|aime24|0|0,\
-mm|math_500|0|0,\
+mm|truthfulqa_c|0|0,\
+mm|commonsenseqa_c|0|0,\
+mm|arc_easy_c|0|0,\
+mm|arc_challenge_c|0|0,\
+mm|gpqa_diamond_c|0|0,\
+mm|aime24_c|0|0,\
+mm|math_500_c|0|0,\
 mm|gsm8k_c|0|0\
 """
-# extended|lcb:codegeneration_release_v6|0|0\
 
     pipeline = Pipeline(
         tasks=tasks,

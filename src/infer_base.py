@@ -64,8 +64,8 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
                     "logits": response.logits if isinstance(response, GenerativeResponse) else None,
                     # "input_tokens": response.input_tokens,
                     # "generated_tokens": response.generated_tokens,
-                    "input_tokens_count": len(response.input_tokens) if response.input_tokens is not None else -1,
-                    "generated_tokens_count": len(response.generated_tokens) if response.generated_tokens is not None else -1,
+                    "input_tokens_count": len(response.input_tokens),
+                    "generated_tokens_count": [len(o) for o in response.generated_tokens],
                     "truncated_tokens_count": response.truncated_tokens_count,
                     "padded_tokens_count": response.padded_tokens_count,
                 }
@@ -80,7 +80,7 @@ def run(pipeline: Pipeline, output_path: str, date_id: str):
         )
 
 def check_existed_tasks(output_dir: str, _model_name:str, _timestamp:str, tasks: str):
-    if _timestamp is None:
+    if _timestamp is None or tasks is None:
         return tasks
     output_dir = os.path.join(output_dir, "outputs", _model_name, _timestamp)
     if not os.path.exists(output_dir):
@@ -127,67 +127,68 @@ def main(args):
         model_name=model_name,
         dtype="bfloat16",
         max_model_length=args.max_length,
+        tensor_parallel_size=args.tensor_parallel_size,
         gpu_memory_utilization=0.9,
         use_chat_template=False,
         generation_parameters= {
             "max_new_tokens": None,
             "temperature": 0.0,
-            "stop_tokens": ["\n"]
         }
     )
 
-    timestamp = datetime.now()
-    tasks = "mm|mmlu_pro_c|0|0"
-    
     pipeline_params = PipelineParameters(
         launcher_type=ParallelismManager.VLLM,
         dataset_loading_processes=32,
-        max_samples=6000, # for mmlu_pro
         use_chat_template=False,
     )
 
     pipeline = Pipeline(
-        tasks=tasks,
+        tasks=None,
         pipeline_parameters=pipeline_params,
         evaluation_tracker=evaluation_tracker,
         model_config=model_config,
     ) # init the tasks
 
+    timestamp = datetime.now()
+    # Reasoning task
+    tasks = """\
+mm|gpqa_diamond_c|0|0,\
+mm|aime24_c|0|0,\
+mm|math_500_c|0|0,\
+mm|gsm8k_c|0|0\
+"""
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
+        pipeline.pipeline_parameters.max_samples=500
+        pipeline.pipeline_parameters.stop_tokens = ["Problem", "problem"],
+        pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
 
     # MCQ greedy search
     tasks = """\
-helm|truthfulqa|0|0,\
-helm|commonsenseqa|0|0,\
-mm|arc_c:easy|0|0,\
-mm|arc_c:challenge|0|0,\
-mm|gpqa_c:diamond|0|0\
+mm|truthfulqa_c|0|0,\
+mm|commonsenseqa_c|0|0,\
+mm|arc_easy_c|0|0,\
+mm|arc_challenge_c|0|0\
 """
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
         pipeline.pipeline_parameters.max_samples=500
+        pipeline.pipeline_parameters.stop_tokens = ["\n"]
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
 
-    # Generative task (Reasoning)
-    tasks = """\
-mm|aime24|0|0,\
-mm|math_500|0|0,\
-mm|gsm8k_c|0|0\
-"""
-# extended|lcb:codegeneration_release_v6|0|0
+    # MMLU Pro
+    # tasks = "mm|mmlu_pro_c|0|0"
+    tasks = None
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
-        pipeline.pipeline_parameters.max_samples=500
+        pipeline.pipeline_parameters.max_samples=6000
+        pipeline.pipeline_parameters.stop_tokens = ["\n"]
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
-        pipeline.model._config.generation_parameters.temperature = 0.6
-        pipeline.model._config.generation_parameters.top_p = 0.95
-        pipeline.model._config.generation_parameters.stop_tokens = None
         run(pipeline, output_path, date_id)
     
     
@@ -206,5 +207,7 @@ if __name__ == "__main__":
                       help='Timestamp for output directory (default: current time, "latest" for most recent)')
     parser.add_argument('--max_length', type=int, default=4096,
                       help='Maximum length of LLM')
+    parser.add_argument('--tensor_parallel_size', type=int, default=1,
+                      help='tensor parallel for vllm, default 1')
     args = parser.parse_args()
     main(args)

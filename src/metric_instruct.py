@@ -102,9 +102,9 @@ def main():
 mm|mmlu_pro|0|0,\
 mm|truthfulqa|0|0,\
 mm|commonsenseqa|0|0,\
-mm|arc:easy|0|0,\
-mm|arc:challenge|0|0,\
-mm|gpqa:diamond|0|0,\
+mm|arc_easy|0|0,\
+mm|arc_challenge|0|0,\
+mm|gpqa_diamond|0|0,\
 mm|aime24|0|0,\
 mm|math_500|0|0,\
 mm|gsm8k|0|0\
