@@ -179,8 +179,7 @@ mm|arc_challenge|0|0\
         run(pipeline, output_path, date_id)
 
     # MMLU Pro
-    # tasks = "mm|mmlu_pro|0|0"
-    tasks = None
+    tasks = "mm|mmlu_pro|0|0"
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
