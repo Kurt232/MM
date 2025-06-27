@@ -1,0 +1,25 @@
+name: M1-Phi4-10M
+target:
+- layers.1.self_attn
+- layers.11.self_attn
+- layers.12.mlp
+- layers.13.self_attn
+- layers.17.self_attn
+- layers.2.self_attn
+- layers.21.mlp
+- layers.22.mlp
+- layers.23.mlp
+- layers.24.mlp
+- layers.25.mlp
+- layers.27.self_attn
+- layers.29.self_attn
+- layers.3.mlp
+- layers.30.mlp
+- layers.31.mlp
+- layers.6.self_attn
+- layers.8.mlp
+- layers.9.self_attn
+threshold: 0.1
+level: module
+model_name: microsoft/Phi-4-mini-reasoning
+base_model_name: microsoft/Phi-4-mini-instruct

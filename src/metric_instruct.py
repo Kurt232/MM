@@ -188,7 +188,7 @@ mm|gsm8k|0|0\
     results: dict = dict(pipeline.evaluation_tracker.metrics_logger.metric_aggregated)
 
     versions = pipeline.evaluation_tracker.versions_logger.versions
-    results_dict = {"results": results, "versions": versions}
+    results_dict = {"results": results, "versions": versions, "size": {task_name: sum([len(v) for v in metrics.values()]) for task_name, metrics in pipeline.evaluation_tracker.metrics_logger.metrics_values.items()}}
     logger.debug("--- SAVING RESULTS ---")
     save_dir = f"{output_dir}/results/{_model_name}"
     os.makedirs(save_dir, exist_ok=True)
