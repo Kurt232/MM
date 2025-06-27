@@ -1,7 +1,7 @@
 models
 vv
 data
-merged
+merged*
 
 logs/*
 __pycache__/*
