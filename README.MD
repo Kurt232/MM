@@ -66,3 +66,36 @@ python src/infer_instruct.py data/eval/$NAME ./models/$MODEL --max_length $MAX_L
 python src/metric_instruct.py data/eval/$NAME ./models/$MODEL latest >> data/eval/$NAME/logs/$MODEL.log
 python src/eval.py data/eval/$NAME ./models/$MODEL latest >> data/eval/$NAME/logs/$MODEL.log # add the metric results in the generation logs
 ```
+
+# Run the benchmark
+We generate the data in `data/eval/0623_32k` from instruct prompt datasets including `mm|truthfulqa|0|0, mm|commonsenseqa|0|0, mm|arc_easy|0|0, mm|arc_challenge|0|0, mm|gpqa_diamond|0|0, mm|aime24|0|0, mm|math_500|0|0, mm|gsm8k|0|0`. Note that we exclude `mm|mmlu_pro|0|0`.
+
+we can see the details in `scripts/merge_bench.sh` and `scripts/eval_bench.sh`
+```bash
+git clone https://huggingface.co/datasets/Kurt232/MM data # or git clone https://hf-mirror.com/datasets/Kurt232/MM
+
+output_dir="data/test/0-1k"
+model="./merged1/llama_linear_1" # can be replaced any merged model
+
+python src/infer_load.py \
+$output_dir \ # generations dir
+./models/R-Phi4 \ # load which model\'s generations
+$model \ # current inference model
+latest \ # timestamp for generations
+[--save_dir dir] # we can change where to save, and the default is $output_dir
+--max_length 2048 --tensor_parallel_size 2 > $root/logs/$model_name.log
+
+python src/metric_instruct.py $root $model latest >> $root/logs/$model_name.log
+python src/eval.py $root $model latest
+```
+
+# Prepare data
+The data has already been prepared by `git clone https://huggingface.co/datasets/Kurt232/MM data`
+
+```bash
+bash scripts/bench.sh # to generate 32k context length
+# ! please masked the mm|mmlu_pro|0|0 in src/infer_instruct.py
+python split.py # split reasoning data
+python split_map.py # map base model data according to reasoning data.
+bash scripts/split.sh # to get the metrics
+```

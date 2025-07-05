@@ -1,6 +1,6 @@
 """
 split the 32k generation into 1k, 2k, 4k, 8k, 16k, 32k
-only for instruct of Phi4
+to use the reasoning data sample id to map the base model data
 """
 import pandas as pd
 import os
@@ -8,6 +8,7 @@ import ast
 
 data_dict = {
     "._models_R-Phi4/2025-06-23T01-52-10.258150": "._models_I-Phi4/2025-06-26T21-33-22.888531",
+    # llama reasoning to map to llama base
 }
 
 length_list = [x * 1024 for x in [1, 2, 4, 8, 16, 32]]

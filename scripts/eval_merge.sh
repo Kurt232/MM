@@ -10,7 +10,7 @@ trap cleanup SIGINT SIGTERM
 gpus="2,3"
 root="data/test/0-1k"
 mkdir -p $root/logs
-for model in ./merged/*; do
+for model in ./merged/*; do # eval all in merged
     if [ -d "$model" ]; then
         model_name=$(basename "$model")
         echo "Processing model: $model_name"
@@ -21,6 +21,7 @@ for model in ./merged/*; do
         {
             CUDA_VISIBLE_DEVICES=$gpus python src/infer_load.py $root ./models/R-Phi4 $model latest --max_length 2048 --tensor_parallel_size 2 > $root/logs/$model_name.log
             python src/metric_instruct.py $root $model latest >> $root/logs/$model_name.log &
+            python src/eval.py $root $model latest &
         }
     fi
 done
