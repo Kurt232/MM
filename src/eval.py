@@ -14,10 +14,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from lighteval.metrics.metrics import PassAtK, SimpleEvalMatch, normalize_math_expression, compare_gold_target
+from lighteval.metrics.metrics import PassAtK, SimpleEvalMatch, normalize_math_expression, compare_gold_target, ExactMatches
 
-math_tasks = ["mm|aime24|0", "mm|math_500|0", "mm|gsm8k|0"]
-mcq_tasks = ["mm|mmlu_pro|0", "mm|truthfulqa|0", "mm|commonsenseqa|0", "mm|arc_easy|0", "mm|arc_challenge|0", "mm|gpqa_diamond|0"]
+math_tasks = ["mm|aime24|0", "mm|math_500|0", "mm|gsm8k|0", "mm|aime24_c|0", "mm|math_500_c|0", "mm|gsm8k_c|0"]
+mcq_instruct_tasks = ["mm|mmlu_pro|0", "mm|truthfulqa|0", "mm|commonsenseqa|0", "mm|arc_easy|0", "mm|arc_challenge|0", "mm|gpqa_diamond|0"]
+mcq_completion_tasks = ["mm|mmlu_pro_c|0", "mm|truthfulqa_c|0", "mm|commonsenseqa_c|0", "mm|arc_easy_c|0", "mm|arc_challenge_c|0", "mm|gpqa_diamond_c|0"]
 
 def eval(task_name: str, golds: list, preds: list) -> pd.DataFrame:
     if task_name in math_tasks:
@@ -30,8 +31,10 @@ def eval(task_name: str, golds: list, preds: list) -> pd.DataFrame:
             # Uses sympy for comparison
             sample_scoring_function=compare_gold_target,
         ).compute
-    elif task_name in mcq_tasks:
+    elif task_name in mcq_instruct_tasks:
         metric_func = SimpleEvalMatch().compute
+    elif task_name in mcq_completion_tasks:
+        metric_func = ExactMatches(strip_strings=True, type_exact_match="prefix").compute
     else:
         raise ValueError(f"Unsupported task type: {task_name}")
 

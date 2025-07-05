@@ -160,7 +160,7 @@ mm|gsm8k|0|0\
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
-        pipeline.pipeline_parameters.max_samples=500
+        # pipeline.pipeline_parameters.max_samples=500
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
 
@@ -174,7 +174,7 @@ mm|arc_challenge|0|0\
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
-        pipeline.pipeline_parameters.max_samples=500
+        # pipeline.pipeline_parameters.max_samples=500
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
 
@@ -183,7 +183,7 @@ mm|arc_challenge|0|0\
     tasks = check_existed_tasks(output_dir, _model_name, date_id, tasks)
     if tasks:
         logger.info(f"Running inference for tasks: {tasks}")
-        pipeline.pipeline_parameters.max_samples=6000
+        # pipeline.pipeline_parameters.max_samples=6000
         pipeline._init_tasks_and_requests(tasks=tasks) # re-initialize the tasks in pipeline
         run(pipeline, output_path, date_id)
     
