@@ -63,7 +63,7 @@ if __name__ == "__main__":
     prompts = df["full_prompt"].tolist()
 
     llm = LLM(
-        model=model_name, 
+        model=target_model_name, 
         tensor_parallel_size=args.tensor_parallel_size,
         gpu_memory_utilization=0.9,
         max_model_len=max_length)
