@@ -60,3 +60,9 @@ mm|gsm8k|0|0\
 # Recipes
 See it in the `scripts/infer.sh`.
 We recommend to use soft link to save models in `./models/`
+
+```bash
+python src/infer_instruct.py data/eval/$NAME ./models/$MODEL --max_length $MAX_LEN --tensor_parallel_size 4 --timestamp latest > data/eval/$NAME/logs/$MODEL.log
+python src/metric_instruct.py data/eval/$NAME ./models/$MODEL latest >> data/eval/$NAME/logs/$MODEL.log
+python src/eval.py data/eval/$NAME ./models/$MODEL latest >> data/eval/$NAME/logs/$MODEL.log # add the metric results in the generation logs
+```
